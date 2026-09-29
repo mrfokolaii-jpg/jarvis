@@ -340,18 +340,39 @@ function addTyping(){
 }
 function removeTyping(){ const t=$('typing'); if(t) t.remove(); }
 
+function isLegacyHF(base){ return /api-inference\.huggingface\.co\/models/.test(base); }
+
+async function llmFetch(messages, cfg){
+  cfg = cfg || settings.llm;
+  const base = cfg.base.replace(/\/+$/,'');
+  if(isLegacyHF(base)){
+    // legacy HuggingFace Inference API (same as FOKO AI)
+    const prompt = messages.map(m => (m.role==='system' ? 'دستور: ' : (m.role==='assistant' ? 'دستیار: ' : '')) + m.content).join('\n\n');
+    const res = await fetch(base + '/' + cfg.model, {
+      method:'POST',
+      headers:{'Authorization':'Bearer '+cfg.key, 'Content-Type':'application/json'},
+      body: JSON.stringify({ inputs: prompt, parameters:{ max_new_tokens: 700 } })
+    });
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data = await res.json();
+    const out = Array.isArray(data) ? (data[0] && data[0].generated_text) : (data && data.generated_text);
+    return out || null;
+  }
+  // OpenAI-compatible (router / DeepSeek / etc.)
+  const res = await fetch(base + '/chat/completions', {
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+cfg.key},
+    body: JSON.stringify({ model: cfg.model, messages, temperature:0.7 })
+  });
+  if(!res.ok) throw new Error('HTTP '+res.status);
+  const data = await res.json();
+  return (data.choices && data.choices[0] && data.choices[0].message.content) || null;
+}
+
 async function callLLM(messages){
   const s = settings.llm;
   if(!s.base || !s.key || !s.model) return null;
-  const base = s.base.replace(/\/+$/,'');
-  const res = await fetch(base + '/chat/completions', {
-    method:'POST',
-    headers:{'Content-Type':'application/json','Authorization':'Bearer '+s.key},
-    body: JSON.stringify({ model:s.model, messages, temperature:0.7 })
-  });
-  if(!res.ok) throw new Error('LLM '+res.status);
-  const data = await res.json();
-  return (data.choices && data.choices[0] && data.choices[0].message.content) || null;
+  return llmFetch(messages, s);
 }
 
 async function sendMessage(){
@@ -536,13 +557,11 @@ $('saveSettings').onclick = ()=>{
 $('testVoice').onclick = ()=> speak('سلام '+ (settings.owner||'') + '، من '+ (settings.bot||'جارویس') +' هستم.');
 $('testLlm').onclick = async ()=>{
   if(!$('setLlmBase').value || !$('setLlmKey').value || !$('setLlmModel').value){ toast('اول آدرس، کلید و مدل رو پر کن'); return; }
-  const tmp = { ...settings.llm, base:$('setLlmBase').value, key:$('setLlmKey').value, model:$('setLlmModel').value };
-  const s = tmp; const base = s.base.replace(/\/+$/,'');
+  const cfg = { base:$('setLlmBase').value.trim(), key:$('setLlmKey').value.trim(), model:$('setLlmModel').value.trim() };
   toast('در حال تست...');
   try{
-    const res = await fetch(base+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+s.key},body:JSON.stringify({model:s.model,messages:[{role:'user',content:'فقط بگو: برقراره'}]})});
-    const d = await res.json();
-    toast(res.ok ? '✅ اتصال برقراره' : '❌ خطا '+res.status);
+    const out = await llmFetch([{role:'user',content:'فقط بگو: برقراره'}], cfg);
+    toast(out ? '✅ اتصال برقراره' : '❌ جواب خالی برگشت');
   }catch(e){ toast('❌ '+e.message); }
 };
 
