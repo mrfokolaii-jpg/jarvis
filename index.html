@@ -197,6 +197,7 @@ nav button.active .ic{filter:drop-shadow(0 0 8px rgba(34,211,238,.6))}
       <div class="row" style="margin-top:12px">
         <button id="testLlm" class="ghost">⚡ تست اتصال</button>
       </div>
+      <div id="llmDiag" class="hint" style="margin-top:10px;direction:ltr;text-align:left;word-break:break-all;white-space:pre-wrap;font-size:12px"></div>
     </div>
 
     <div class="card">
@@ -342,8 +343,30 @@ function removeTyping(){ const t=$('typing'); if(t) t.remove(); }
 
 function isLegacyHF(base){ return /api-inference\.huggingface\.co\/models/.test(base); }
 
+/* --- helpers: normalize base URL + friendly HTTP errors --- */
+function normBase(raw){
+  let b = String(raw==null ? '' : raw);
+  // strip zero-width / bidi marks that sneak in from RTL keyboards and copy-paste
+  b = b.replace(/[\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]/g,'').trim();
+  if(!b) return '';
+  if(!/^https?:\/\//i.test(b)) b = 'https://' + b.replace(/^\/+/, '');
+  b = b.replace(/\/+$/,'');
+  b = b.replace(/\/chat\/completions\/?$/i,'');
+  return b.replace(/\/+$/,'');
+}
+function httpErrLabel(st){
+  if(st===400) return 'درخواست نامعتبر — معمولاً نام مدل اشتباهه';
+  if(st===401 || st===403) return 'کلید API اشتباهه یا مجاز نیست';
+  if(st===404) return 'آدرس پایه یا نام مدل پیدا نشد';
+  if(st===405) return 'آدرس پایه ناقصه — باید با https:// شروع بشه';
+  if(st===429) return 'درخواست زیاد شد — چند لحظه صبر کن';
+  if(st>=500) return 'سرور طرف مقابل مشکل داره — دوباره امتحان کن';
+  return 'خطای نامشخص';
+}
+
 async function llmFetch(messages, cfg){
   cfg = cfg || settings.llm;
+  cfg = { base: normBase(cfg.base), key: String(cfg.key||'').trim(), model: String(cfg.model||'').trim() };
   const base = cfg.base.trim().replace(/\/+$/,'').replace(/\/chat\/completions$/,'');
   if(isLegacyHF(base)){
     // legacy HuggingFace Inference API (same as FOKO AI)
@@ -353,20 +376,30 @@ async function llmFetch(messages, cfg){
       headers:{'Authorization':'Bearer '+cfg.key, 'Content-Type':'application/json'},
       body: JSON.stringify({ inputs: prompt, parameters:{ max_new_tokens: 700 } })
     });
-    if(!res.ok) throw new Error('HTTP '+res.status);
+    if(!res.ok) throw new Error('HTTP '+res.status+' — '+httpErrLabel(res.status));
     const data = await res.json();
     const out = Array.isArray(data) ? (data[0] && data[0].generated_text) : (data && data.generated_text);
     return out || null;
   }
-  // OpenAI-compatible (router / DeepSeek / etc.)
-  const res = await fetch(base + '/chat/completions', {
-    method:'POST',
-    headers:{'Content-Type':'application/json','Authorization':'Bearer '+cfg.key},
-    body: JSON.stringify({ model: cfg.model, messages, temperature:0.7 })
-  });
-  if(!res.ok) throw new Error('HTTP '+res.status);
+  // OpenAI-compatible (Groq / OpenRouter / DeepSeek / HF router / ...)
+  const url = base + '/chat/completions';
+  let res;
+  try{
+    res = await fetch(url, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+cfg.key},
+      body: JSON.stringify({ model: cfg.model, messages, temperature:0.7 })
+    });
+  }catch(e){
+    throw new Error('اتصال برقرار نشد — اینترنت یا VPN رو چک کن');
+  }
+  if(!res.ok){
+    let detail = '';
+    try{ const j = await res.json(); detail = (j && j.error && (j.error.message || j.error.code)) || (j && j.detail) || ''; }catch(e){}
+    throw new Error('HTTP '+res.status+' — '+httpErrLabel(res.status)+(detail ? ' | '+String(detail).slice(0,140) : ''));
+  }
   const data = await res.json();
-  return (data.choices && data.choices[0] && data.choices[0].message.content) || null;
+  return (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || null;
 }
 
 async function callLLM(messages){
@@ -533,7 +566,8 @@ updateGhStatus();
 function loadSettingsUI(){
   $('setOwner').value = settings.owner||'';
   $('setBot').value = settings.bot||'';
-  $('setLlmBase').value = settings.llm.base||'';
+  settings.llm.base = normBase(settings.llm.base);
+  $('setLlmBase').value = settings.llm.base;
   $('setLlmKey').value = settings.llm.key||'';
   $('setLlmModel').value = settings.llm.model||'';
   $('setTts').checked = settings.tts!==false;
@@ -542,10 +576,12 @@ function loadSettingsUI(){
   $('setGhRepo').value = settings.github.repo||'';
 }
 $('saveSettings').onclick = ()=>{
+  const nb = normBase($('setLlmBase').value);
+  $('setLlmBase').value = nb;
   settings = {
     owner: $('setOwner').value.trim() || 'محمد فوکو',
     bot: $('setBot').value.trim() || 'جارویس',
-    llm:{ base:$('setLlmBase').value.trim(), key:$('setLlmKey').value.trim(), model:$('setLlmModel').value.trim() },
+    llm:{ base:nb, key:$('setLlmKey').value.trim(), model:$('setLlmModel').value.trim() },
     tts: $('setTts').checked,
     voice: $('setVoice').value,
     github:{ token:$('setGhToken').value.trim(), owner:$('setGhOwner').value.trim(), repo:$('setGhRepo').value.trim() }
@@ -556,13 +592,23 @@ $('saveSettings').onclick = ()=>{
 };
 $('testVoice').onclick = ()=> speak('سلام '+ (settings.owner||'') + '، من '+ (settings.bot||'جارویس') +' هستم.');
 $('testLlm').onclick = async ()=>{
-  if(!$('setLlmBase').value || !$('setLlmKey').value || !$('setLlmModel').value){ toast('اول آدرس، کلید و مدل رو پر کن'); return; }
-  const cfg = { base:$('setLlmBase').value.trim(), key:$('setLlmKey').value.trim(), model:$('setLlmModel').value.trim() };
+  const base = normBase($('setLlmBase').value);
+  const key = $('setLlmKey').value.trim();
+  const model = $('setLlmModel').value.trim();
+  if(!base || !key || !model){ toast('اول آدرس، کلید و مدل رو پر کن'); return; }
+  $('setLlmBase').value = base;
+  const url = isLegacyHF(base) ? (base + '/' + model) : (base + '/chat/completions');
+  $('llmDiag').textContent = '⏳ در حال تست:\n' + url;
   toast('در حال تست...');
   try{
-    const out = await llmFetch([{role:'user',content:'فقط بگو: برقراره'}], cfg);
-    toast(out ? '✅ اتصال برقراره' : '❌ جواب خالی برگشت');
-  }catch(e){ toast('❌ '+e.message); }
+    const out = await llmFetch([{role:'user',content:'فقط بگو: برقراره'}], {base, key, model});
+    if(!out) throw new Error('جواب خالی برگشت');
+    $('llmDiag').textContent = '✅ اتصال برقراره\n' + url;
+    toast('✅ اتصال برقراره');
+  }catch(e){
+    $('llmDiag').textContent = '❌ ' + e.message + '\n' + url;
+    toast('❌ '+e.message);
+  }
 };
 
 /* ===== init ===== */
