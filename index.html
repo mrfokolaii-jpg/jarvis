@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>جارویس — دستیار شخصی محمد فوکو</title>
+<meta name="theme-color" content="#0b1220">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<style>
+:root{
+  --bg:#0b1220; --bg2:#0f1729; --card:#151e31; --card2:#1a2540;
+  --border:#243049; --txt:#e6edf3; --muted:#8b98ad;
+  --accent:#3b82f6; --accent2:#22d3ee; --ok:#22c55e; --warn:#f59e0b; --err:#ef4444;
+  --radius:16px; --shadow:0 8px 30px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;height:100%}
+body{
+  background:radial-gradient(1200px 600px at 80% -10%, #14233f 0%, var(--bg) 55%);
+  color:var(--txt);
+  font-family:"Vazirmatn", "IRANSans", Tahoma, "Segoe UI", sans-serif;
+  font-size:15px; line-height:1.7;
+  display:flex; flex-direction:column; min-height:100dvh;
+}
+/* header */
+header{
+  padding:14px 16px 10px; display:flex; align-items:center; gap:12px;
+  border-bottom:1px solid var(--border); background:rgba(11,18,32,.7);
+  backdrop-filter:blur(10px); position:sticky; top:0; z-index:30;
+}
+.logo{width:40px;height:40px;border-radius:12px;flex:0 0 auto;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  display:flex;align-items:center;justify-content:center;font-size:20px}
+.head-titles{flex:1;min-width:0}
+.head-titles h1{margin:0;font-size:17px;font-weight:700}
+.head-titles .sub{font-size:11px;color:var(--muted);margin-top:1px}
+.status{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--muted)}
+.dot.on{background:var(--ok);box-shadow:0 0 10px var(--ok)}
+/* main */
+main{flex:1;overflow-y:auto;padding:14px 14px 90px}
+.view{display:none;animation:fade .25s ease}
+.view.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+/* cards */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  padding:16px;margin-bottom:14px;box-shadow:var(--shadow)}
+.card h3{margin:0 0 4px;font-size:15px}
+.card .hint{font-size:12px;color:var(--muted);margin:0 0 12px}
+.grid{display:grid;gap:12px}
+.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+/* inputs */
+label{display:block;font-size:12px;color:var(--muted);margin:10px 0 4px}
+input,textarea,select{width:100%;background:var(--bg2);border:1px solid var(--border);
+  color:var(--txt);border-radius:11px;padding:11px 12px;font-size:14px;font-family:inherit}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
+textarea{resize:vertical;min-height:80px}
+button{background:var(--accent);color:#fff;border:none;border-radius:11px;
+  padding:11px 16px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;
+  transition:transform .05s,opacity .2s}
+button:active{transform:scale(.97)}
+button.ghost{background:var(--card2);color:var(--txt);border:1px solid var(--border)}
+button.soft{background:rgba(59,130,246,.15);color:#9cc4ff;border:1px solid rgba(59,130,246,.3)}
+button.ok{background:var(--ok)}
+button.warn{background:var(--warn)}
+button.danger{background:var(--err)}
+button:disabled{opacity:.5;pointer-events:none}
+/* bottom nav */
+nav{position:fixed;bottom:0;left:0;right:0;display:flex;border-top:1px solid var(--border);
+  background:rgba(11,18,32,.92);backdrop-filter:blur(12px);z-index:40;padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;background:none;border:none;color:var(--muted);padding:11px 4px 13px;
+  font-size:11px;display:flex;flex-direction:column;align-items:center;gap:4px;font-weight:500}
+nav button .ic{font-size:20px;line-height:1}
+nav button.active{color:var(--accent2)}
+nav button.active .ic{filter:drop-shadow(0 0 8px rgba(34,211,238,.6))}
+/* chat */
+.chat{display:flex;flex-direction:column;gap:12px}
+.msg{max-width:88%;padding:11px 14px;border-radius:14px;white-space:pre-wrap;word-break:break-word}
+.msg.me{align-self:flex-start;background:var(--card2);border:1px solid var(--border);
+  border-bottom-right-radius:4px}
+.msg.bot{align-self:flex-end;background:linear-gradient(135deg,#1d4ed8,#0e7490);
+  border-bottom-left-radius:4px}
+.msg .who{display:block;font-size:10px;color:var(--muted);margin-bottom:3px}
+.msg.me .who{color:#9cc4ff}
+.chat-input{position:sticky;bottom:78px;display:flex;gap:8px;align-items:flex-end}
+.chat-input textarea{min-height:46px;max-height:120px;flex:1}
+.mic-btn{flex:0 0 auto;width:48px;height:48px;border-radius:50%;font-size:20px;
+  background:var(--card2);border:1px solid var(--border);color:var(--txt)}
+.mic-btn.rec{background:var(--err);animation:pulse 1s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(239,68,68,.5)}100%{box-shadow:0 0 0 16px rgba(239,68,68,0)}}
+/* list items */
+.item{background:var(--bg2);border:1px solid var(--border);border-radius:11px;
+  padding:11px 13px;margin-bottom:8px}
+.item .t{font-size:13px;font-weight:600}
+.item .d{font-size:11px;color:var(--muted);margin-top:3px;white-space:pre-wrap}
+.tag{display:inline-block;font-size:10px;padding:2px 8px;border-radius:20px;
+  background:rgba(34,211,238,.15);color:var(--accent2);margin-left:6px}
+.badge{display:inline-block;font-size:10px;padding:2px 8px;border-radius:20px;background:var(--card2);color:var(--muted)}
+.toggle{position:relative;display:inline-block;width:46px;height:26px;flex:0 0 auto}
+.toggle input{display:none}
+.slider{position:absolute;inset:0;background:var(--bg2);border:1px solid var(--border);
+  border-radius:26px;transition:.2s;cursor:pointer}
+.slider:before{content:"";position:absolute;width:20px;height:20px;border-radius:50%;
+  left:2px;top:2px;background:var(--muted);transition:.2s}
+.toggle input:checked + .slider{background:var(--accent);border-color:var(--accent)}
+.toggle input:checked + .slider:before{transform:translateX(20px);background:#fff}
+.setting-row{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:10px 0;border-bottom:1px solid var(--border)}
+.setting-row:last-child{border-bottom:none}
+.setting-row .lbl{font-size:13px}
+.setting-row .lbl small{display:block;color:var(--muted);font-size:11px}
+.typing{display:inline-flex;gap:3px;align-items:center}
+.typing i{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:blink 1s infinite}
+.typing i:nth-child(2){animation-delay:.2s}.typing i:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,80%,100%{opacity:.2}40%{opacity:1}}
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--card2);
+  border:1px solid var(--border);padding:10px 16px;border-radius:12px;font-size:13px;z-index:60;
+  opacity:0;transition:.3s;pointer-events:none;max-width:90%;text-align:center}
+.toast.show{opacity:1}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🧠</div>
+  <div class="head-titles">
+    <h1 id="botName">جارویس</h1>
+    <div class="sub">دستیار شخصی <span id="ownerName">محمد فوکو</span></div>
+  </div>
+  <div class="status"><span class="dot on" id="statusDot"></span><span id="statusTxt">آماده</span></div>
+</header>
+
+<main>
+  <!-- CHAT -->
+  <section id="view-chat" class="view active">
+    <div class="chat" id="chatBox"></div>
+    <div class="chat-input">
+      <button class="mic-btn" id="micBtn" title="صحبت کن">🎤</button>
+      <textarea id="chatText" placeholder="پیامت رو بنویس یا بگو..."></textarea>
+      <button id="sendBtn" style="flex:0 0 auto;width:48px;height:48px;border-radius:50%">➤</button>
+    </div>
+  </section>
+
+  <!-- KNOWLEDGE -->
+  <section id="view-knowledge" class="view">
+    <div class="card">
+      <h3>📚 دانش</h3>
+      <p class="hint">فایل متنی (txt / md / json) آپلود کن تا به دانش جارویس اضافه بشه.</p>
+      <input type="file" id="fileInput" multiple accept=".txt,.md,.json,.csv,.html,.xml">
+      <div class="row" style="margin-top:12px">
+        <button id="searchBtn" class="ghost">🔍 جستجو</button>
+        <button id="syncKnowBtn" class="soft">☁️ ذخیره در گیتهاب</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>کتابخانه دانش <span class="badge" id="knowCount">0</span></h3>
+      <div id="knowList"></div>
+    </div>
+  </section>
+
+  <!-- MEMORY -->
+  <section id="view-memory" class="view">
+    <div class="card">
+      <h3>🧠 حافظه (گیتهاب)</h3>
+      <p class="hint" id="ghStatus">گیتهاب متصل نشده — برو به تنظیمات.</p>
+      <textarea id="memText" placeholder="یه یادداشت / واقعیت که جارویس باید یادش بمونه..."></textarea>
+      <button id="memSave" style="margin-top:10px">💾 ذخیره در حافظه</button>
+    </div>
+    <div class="card">
+      <h3>یادداشت‌های حافظه</h3>
+      <div id="memList"></div>
+    </div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section id="view-settings" class="view">
+    <div class="card">
+      <h3>👤 پروفایل</h3>
+      <label>اسم صاحب سیستم</label>
+      <input id="setOwner" placeholder="محمد فوکو">
+      <label>اسم ربات</label>
+      <input id="setBot" placeholder="جارویس">
+    </div>
+
+    <div class="card">
+      <h3>🧩 مغز (LLM)</h3>
+      <p class="hint">هر سرویس سازگار با OpenAI رو می‌تونی وصل کنی (آدرس پایه + کلید + مدل).</p>
+      <label>آدرس پایه (Base URL)</label>
+      <input id="setLlmBase" placeholder="https://api.example.com/v1">
+      <label>کلید API</label>
+      <input id="setLlmKey" type="password" placeholder="sk-...">
+      <label>نام مدل</label>
+      <input id="setLlmModel" placeholder="model-name">
+      <div class="row" style="margin-top:12px">
+        <button id="testLlm" class="ghost">⚡ تست اتصال</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>🎙️ صدا</h3>
+      <div class="setting-row">
+        <div class="lbl">پاسخ صوتی (TTS)<small>جارویس جواب‌ها رو بلند بخونه</small></div>
+        <label class="toggle"><input type="checkbox" id="setTts" checked><span class="slider"></span></label>
+      </div>
+      <div class="setting-row">
+        <div class="lbl">صدای فارسی</div>
+        <select id="setVoice"></select>
+      </div>
+      <button id="testVoice" class="ghost" style="margin-top:8px">🔊 تست صدا</button>
+    </div>
+
+    <div class="card">
+      <h3>🔗 گیتهاب (حافظه)</h3>
+      <p class="hint">برای ذخیره حافظه و دانش. پیشنهاد: یه مخزن «خصوصی» جدا بساز.</p>
+      <label>توکن Fine-grained</label>
+      <input id="setGhToken" type="password" placeholder="github_pat_...">
+      <label>نام کاربری (owner)</label>
+      <input id="setGhOwner" placeholder="mrfokolaii-jpg">
+      <label>نام مخزن (repo)</label>
+      <input id="setGhRepo" placeholder="jarvis-memory">
+    </div>
+
+    <div class="card">
+      <button id="saveSettings" class="ok" style="width:100%">💾 ذخیره تنظیمات</button>
+    </div>
+  </section>
+</main>
+
+<nav>
+  <button data-v="chat" class="active"><span class="ic">💬</span>گفتگو</button>
+  <button data-v="knowledge"><span class="ic">📚</span>دانش</button>
+  <button data-v="memory"><span class="ic">🧠</span>حافظه</button>
+  <button data-v="settings"><span class="ic">⚙️</span>تنظیمات</button>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ===== state ===== */
+const store = {
+  get(k,d){ try{ const v=localStorage.getItem(k); return v==null?d:JSON.parse(v);}catch(e){return d;} },
+  set(k,v){ localStorage.setItem(k, JSON.stringify(v)); }
+};
+let settings = store.get('jv_settings', {
+  owner:'محمد فوکو', bot:'جارویس',
+  llm:{base:'', key:'', model:''},
+  tts:true, voice:'',
+  github:{token:'', owner:'', repo:''}
+});
+let knowledge = store.get('jv_knowledge', []);
+let memory = store.get('jv_memory', []);
+let history = store.get('jv_history', []);
+
+const $ = id => document.getElementById(id);
+const toast = msg => { const t=$('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2600); };
+
+/* ===== navigation ===== */
+document.querySelectorAll('nav button').forEach(b=>{
+  b.onclick = ()=>{
+    document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    $('view-'+b.dataset.v).classList.add('active');
+    if(b.dataset.v==='settings') loadVoicesUI();
+  };
+});
+
+/* ===== apply profile ===== */
+function applyProfile(){
+  $('botName').textContent = settings.bot || 'جارویس';
+  $('ownerName').textContent = settings.owner || 'محمد فوکو';
+}
+
+/* ===== TTS ===== */
+function getVoices(){ return window.speechSynthesis ? speechSynthesis.getVoices() : []; }
+function pickFaVoice(){
+  const vs = getVoices();
+  return vs.find(v=>settings.voice && v.name===settings.voice)
+      || vs.find(v=>/fa|persian/i.test(v.lang+''))
+      || vs.find(v=>/fa/i.test(v.name))
+      || null;
+}
+function speak(text){
+  if(!settings.tts) return;
+  if(!('speechSynthesis' in window)){ toast('صدای مرورگر در دسترس نیست'); return; }
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'fa-IR';
+  const v = pickFaVoice(); if(v) u.voice = v;
+  u.rate = 1; u.pitch = 1;
+  speechSynthesis.speak(u);
+}
+function loadVoicesUI(){
+  const sel = $('setVoice');
+  const vs = getVoices();
+  sel.innerHTML = '<option value="">خودکار (فارسی)</option>';
+  vs.forEach(v=>{ if(!v.lang) return; const o=document.createElement('option'); o.value=v.name; o.textContent=`${v.name} (${v.lang})`; sel.appendChild(o); });
+  if(settings.voice) sel.value = settings.voice;
+}
+if('speechSynthesis' in window) speechSynthesis.onvoiceschanged = ()=>loadVoicesUI();
+
+/* ===== STT ===== */
+let rec = null;
+$('micBtn').onclick = ()=>{
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){ toast('شنیدن صدا پشتیبانی نمی‌شه — متنی بنویس'); return; }
+  if(rec){ try{rec.stop();}catch(e){} }
+  rec = new SR();
+  rec.lang = 'fa-IR';
+  rec.interimResults = false;
+  rec.maxAlternatives = 1;
+  $('micBtn').classList.add('rec');
+  $('statusTxt').textContent='در حال شنیدن...';
+  rec.onresult = e => { const t = e.results[0][0].transcript; $('chatText').value = t; sendMessage(); };
+  rec.onerror = e => { toast('خطا در شنیدن: '+e.error); stopRec(); };
+  rec.onend = ()=> stopRec();
+  rec.start();
+};
+function stopRec(){ $('micBtn').classList.remove('rec'); $('statusTxt').textContent='آماده'; rec=null; }
+
+/* ===== chat ===== */
+function addMsg(who, text){
+  const d=document.createElement('div');
+  d.className='msg '+(who==='me'?'me':'bot');
+  const w=document.createElement('span'); w.className='who';
+  w.textContent = who==='me' ? (settings.owner||'من') : (settings.bot||'جارویس');
+  d.appendChild(w); d.appendChild(document.createTextNode(text));
+  $('chatBox').appendChild(d);
+  $('chatBox').scrollTop = $('chatBox').scrollHeight;
+}
+function addTyping(){
+  const d=document.createElement('div');
+  d.className='msg bot'; d.id='typing';
+  d.innerHTML='<span class="typing"><i></i><i></i><i></i></span>';
+  $('chatBox').appendChild(d);
+  $('chatBox').scrollTop=$('chatBox').scrollHeight;
+}
+function removeTyping(){ const t=$('typing'); if(t) t.remove(); }
+
+async function callLLM(messages){
+  const s = settings.llm;
+  if(!s.base || !s.key || !s.model) return null;
+  const base = s.base.replace(/\/+$/,'');
+  const res = await fetch(base + '/chat/completions', {
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+s.key},
+    body: JSON.stringify({ model:s.model, messages, temperature:0.7 })
+  });
+  if(!res.ok) throw new Error('LLM '+res.status);
+  const data = await res.json();
+  return (data.choices && data.choices[0] && data.choices[0].message.content) || null;
+}
+
+async function sendMessage(){
+  const inp = $('chatText');
+  const text = inp.value.trim();
+  if(!text) return;
+  inp.value='';
+  addMsg('me', text);
+  history.push({role:'user', content:text});
+
+  // try knowledge injection
+  let sys = {role:'system', content:`تو «${settings.bot||'جارویس'}» هستی، دستیار شخصی «${settings.owner||'محمد فوکو'}». فارسی، دقیق و کوتاه جواب بده.`};
+  const kctx = knowledge.map(k=>k.text).join('\n---\n').slice(0,6000);
+  if(kctx) sys.content += '\n\nدانش ذخیره‌شده:\n' + kctx;
+
+  const messages = [sys, ...history.slice(-20)];
+  const hasLLM = settings.llm.base && settings.llm.key && settings.llm.model;
+
+  if(!hasLLM){
+    const fallback = `سلام ${settings.owner||''} 🌟 من ${settings.bot||'جارویس'} هستم. هنوز مغز (LLM) وصل نشده.\n\nبرو به «تنظیمات → مغز» و آدرس + کلید + مدل رو وارد کن تا بتونم فکر کنم و جواب بدم.`;
+    addMsg('bot', fallback);
+    speak(fallback);
+    return;
+  }
+
+  addTyping();
+  $('statusTxt').textContent='در حال فکر کردن...';
+  try{
+    const reply = await callLLM(messages);
+    removeTyping();
+    if(!reply){ addMsg('bot','چیزی دریافت نشد.'); $('statusTxt').textContent='آماده'; return; }
+    addMsg('bot', reply);
+    history.push({role:'assistant', content:reply});
+    store.set('jv_history', history);
+    speak(reply);
+    // auto save to github memory
+    if(settings.github.token) saveMemory(text+' → '+reply);
+  }catch(e){
+    removeTyping();
+    addMsg('bot','خطا در اتصال به مغز: '+e.message);
+    $('statusTxt').textContent='آماده';
+  }
+  $('statusTxt').textContent='آماده';
+}
+
+$('sendBtn').onclick = sendMessage;
+$('chatText').addEventListener('keydown', e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendMessage(); } });
+
+/* ===== knowledge ===== */
+function renderKnowledge(){
+  $('knowCount').textContent = knowledge.length;
+  $('knowList').innerHTML = knowledge.length ? '' : '<p class="hint">هنوز دانشی اضافه نشده.</p>';
+  knowledge.forEach((k,i)=>{
+    const d=document.createElement('div'); d.className='item';
+    const t=document.createElement('div'); t.className='t';
+    t.textContent = (k.name||'بدون نام') + ' ';
+    const sz=document.createElement('span'); sz.className='badge'; sz.textContent=(k.text||'').length+' کاراکتر';
+    t.appendChild(sz);
+    const dd=document.createElement('div'); dd.className='d';
+    dd.textContent = (k.text||'').slice(0,220) + (k.text && k.text.length>220?'...':'');
+    const del=document.createElement('button'); del.className='danger'; del.textContent='حذف';
+    del.style.cssText='margin-top:8px;padding:5px 10px;font-size:11px';
+    del.onclick=()=>{ knowledge.splice(i,1); store.set('jv_knowledge',knowledge); renderKnowledge(); };
+    d.appendChild(t); d.appendChild(dd); d.appendChild(del);
+    $('knowList').appendChild(d);
+  });
+}
+$('fileInput').onchange = e=>{
+  const files = [...e.target.files];
+  let left = files.length;
+  files.forEach(f=>{
+    const r = new FileReader();
+    r.onload = ()=>{
+      knowledge.push({name:f.name, text:String(r.result), date:new Date().toISOString()});
+      left--; if(left===0){ store.set('jv_knowledge',knowledge); renderKnowledge(); toast(files.length+' فایل به دانش اضافه شد'); }
+    };
+    r.readAsText(f);
+  });
+  e.target.value='';
+};
+$('searchBtn').onclick = ()=>{
+  const q = prompt('دنبال چی بگردی؟ (جستجو در دانش)');
+  if(!q) return;
+  const hits = knowledge.filter(k=>(k.text||'').toLowerCase().includes(q.toLowerCase()));
+  if(!hits.length){ toast('چیزی پیدا نشد'); return; }
+  const out = hits.map(k=>`📄 ${k.name}:\n`+(k.text||'').slice(0,600)).join('\n\n────────\n\n');
+  addMsg('bot', out);
+  speak('پیدا کردم');
+};
+$('syncKnowBtn').onclick = async ()=>{
+  if(!settings.github.token){ toast('اول گیتهاب رو توی تنظیمات وصل کن'); return; }
+  try{
+    await ghWrite('knowledge.json', JSON.stringify(knowledge, null, 2), 'دانش جارویس');
+    toast('دانش توی گیتهاب ذخیره شد');
+  }catch(e){ toast('خطا: '+e.message); }
+};
+renderKnowledge();
+
+/* ===== memory ===== */
+function renderMemory(){
+  $('memList').innerHTML = memory.length ? '' : '<p class="hint">هنوز یادداشتی نیست.</p>';
+  memory.forEach((m,i)=>{
+    const d=document.createElement('div'); d.className='item';
+    const t=document.createElement('div'); t.className='t'; t.textContent = m;
+    const del=document.createElement('button'); del.className='danger'; del.textContent='حذف';
+    del.style.cssText='margin-top:8px;padding:5px 10px;font-size:11px';
+    del.onclick=()=>{ memory.splice(i,1); store.set('jv_memory',memory); renderMemory(); };
+    d.appendChild(t); d.appendChild(del);
+    $('memList').appendChild(d);
+  });
+}
+function saveMemory(text){
+  memory.unshift(text);
+  if(memory.length>100) memory = memory.slice(0,100);
+  store.set('jv_memory', memory);
+  renderMemory();
+}
+$('memSave').onclick = async ()=>{
+  const t = $('memText').value.trim();
+  if(!t) return;
+  saveMemory(t);
+  $('memText').value='';
+  if(settings.github.token){
+    try{ await ghWrite('memory.json', JSON.stringify(memory,null,2), 'حافظه جارویس'); toast('در گیتهاب هم ذخیره شد'); }
+    catch(e){ toast('ذخیره محلی شد، گیتهاب خطا داد: '+e.message); }
+  } else {
+    toast('به صورت محلی ذخیره شد (گیتهاب متصل نیست)');
+  }
+};
+renderMemory();
+
+/* ===== github API ===== */
+function ghHeaders(){ return {'Authorization':'Bearer '+settings.github.token, 'Accept':'application/vnd.github+json', 'Content-Type':'application/json'}; }
+function b64utf8(str){ return btoa(unescape(encodeURIComponent(str))); }
+async function ghWrite(path, content, msg){
+  const {owner, repo} = settings.github;
+  if(!owner || !repo) throw new Error('owner/repo در تنظیمات خالیه');
+  const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+  let sha = null;
+  try{
+    const r = await fetch(url, {headers: ghHeaders()});
+    if(r.ok){ const j = await r.json(); sha = j.sha; }
+  }catch(e){}
+  const body = { message: msg||('جارویس: '+new Date().toISOString()), content: b64utf8(content) };
+  if(sha) body.sha = sha;
+  const res = await fetch(url, { method:'PUT', headers: ghHeaders(), body: JSON.stringify(body) });
+  if(!res.ok) throw new Error('گیتهاب '+res.status+': '+await res.text().then(t=>t.slice(0,120)));
+  return true;
+}
+function updateGhStatus(){
+  const g = settings.github;
+  $('ghStatus').textContent = (g.token && g.owner && g.repo)
+    ? `متصل: ${g.owner}/${g.repo} ✅` : 'گیتهاب متصل نشده — برو به تنظیمات.';
+}
+updateGhStatus();
+
+/* ===== settings ===== */
+function loadSettingsUI(){
+  $('setOwner').value = settings.owner||'';
+  $('setBot').value = settings.bot||'';
+  $('setLlmBase').value = settings.llm.base||'';
+  $('setLlmKey').value = settings.llm.key||'';
+  $('setLlmModel').value = settings.llm.model||'';
+  $('setTts').checked = settings.tts!==false;
+  $('setGhToken').value = settings.github.token||'';
+  $('setGhOwner').value = settings.github.owner||'';
+  $('setGhRepo').value = settings.github.repo||'';
+}
+$('saveSettings').onclick = ()=>{
+  settings = {
+    owner: $('setOwner').value.trim() || 'محمد فوکو',
+    bot: $('setBot').value.trim() || 'جارویس',
+    llm:{ base:$('setLlmBase').value.trim(), key:$('setLlmKey').value.trim(), model:$('setLlmModel').value.trim() },
+    tts: $('setTts').checked,
+    voice: $('setVoice').value,
+    github:{ token:$('setGhToken').value.trim(), owner:$('setGhOwner').value.trim(), repo:$('setGhRepo').value.trim() }
+  };
+  store.set('jv_settings', settings);
+  applyProfile(); updateGhStatus();
+  toast('تنظیمات ذخیره شد ✅');
+};
+$('testVoice').onclick = ()=> speak('سلام '+ (settings.owner||'') + '، من '+ (settings.bot||'جارویس') +' هستم.');
+$('testLlm').onclick = async ()=>{
+  if(!$('setLlmBase').value || !$('setLlmKey').value || !$('setLlmModel').value){ toast('اول آدرس، کلید و مدل رو پر کن'); return; }
+  const tmp = { ...settings.llm, base:$('setLlmBase').value, key:$('setLlmKey').value, model:$('setLlmModel').value };
+  const s = tmp; const base = s.base.replace(/\/+$/,'');
+  toast('در حال تست...');
+  try{
+    const res = await fetch(base+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+s.key},body:JSON.stringify({model:s.model,messages:[{role:'user',content:'فقط بگو: برقراره'}]})});
+    const d = await res.json();
+    toast(res.ok ? '✅ اتصال برقراره' : '❌ خطا '+res.status);
+  }catch(e){ toast('❌ '+e.message); }
+};
+
+/* ===== init ===== */
+applyProfile();
+loadSettingsUI();
+addMsg('bot', `سلام ${settings.owner||''} 👋 من ${settings.bot||'جارویس'} هستم.\n\nبرای شروع: برو «تنظیمات → مغز» و یه سرویس LLM وصل کن، بعد باهاش حرف بزن.`);
+
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
+</script>
+</body>
+</html>
