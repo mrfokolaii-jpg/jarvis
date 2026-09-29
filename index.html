@@ -344,7 +344,7 @@ function isLegacyHF(base){ return /api-inference\.huggingface\.co\/models/.test(
 
 async function llmFetch(messages, cfg){
   cfg = cfg || settings.llm;
-  const base = cfg.base.replace(/\/+$/,'');
+  const base = cfg.base.trim().replace(/\/+$/,'').replace(/\/chat\/completions$/,'');
   if(isLegacyHF(base)){
     // legacy HuggingFace Inference API (same as FOKO AI)
     const prompt = messages.map(m => (m.role==='system' ? 'دستور: ' : (m.role==='assistant' ? 'دستیار: ' : '')) + m.content).join('\n\n');
