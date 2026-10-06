@@ -1,0 +1,14 @@
+{
+  "name": "Jarvis",
+  "base": "zafiro",
+  "language": "fa",
+  "voice": {"continuous": true, "floatingWidget": true, "transcript": true},
+  "autoApi": {
+    "enabled": true,
+    "slots": 2,
+    "failoverOn": ["429","408","500","502","503","504","timeout","quota"],
+    "retrySameRequest": true,
+    "preserveContext": true
+  },
+  "permissions": {"confirmationForSensitiveActions": true}
+}
