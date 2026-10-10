@@ -1,0 +1,3 @@
+[submodule "zafiro"]
+	path = zafiro
+	url = https://github.com/niki914/zafiro.git
